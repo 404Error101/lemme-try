@@ -30,7 +30,7 @@ COPY . .
 RUN mkdir -p ./unveilr/inputs ./unveilr/cache ./unveilr/temp ./unveilr/dumps ./cache ./storage
 
 # Download and setup Lune (Luau runtime)
-RUN wget https://github.com/lune-org/lune/releases/download/v0.10.4/lune-0.10.4-linux-x86_64.zip \
+RUN wget https://github.com/lune-org/lune/releases/download/v0.8.3/lune-linux-x86_64.zip \
     && unzip lune-linux-x86_64.zip \
     && chmod +x lune \
     && mv lune /usr/local/bin/ \
@@ -39,17 +39,15 @@ RUN wget https://github.com/lune-org/lune/releases/download/v0.10.4/lune-0.10.4-
 # Make sure lune is available
 RUN lune --version || echo "Lune installed successfully"
 
-# Create a default injection.lua if it doesn't exist
+# Create default files if they don't exist
 RUN if [ ! -f injection.lua ]; then \
     echo '-- Default injection.lua fallback\nprint("Running in fallback injection mode")' > injection.lua; \
     fi
 
-# Create a default oracle.oracle if it doesn't exist
 RUN if [ ! -f oracle.oracle ]; then \
     echo "fallback_oracle_key_123456789" > oracle.oracle; \
     fi
 
-# Create a default badSites.json if it doesn't exist
 RUN if [ ! -f badSites.json ]; then \
     echo '["example.com", "test.com"]' > badSites.json; \
     fi
