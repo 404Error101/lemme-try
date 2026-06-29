@@ -1,0 +1,35 @@
+{
+  "name": "unveilr-bot",
+  "version": "2.11.0",
+  "description": "UnveilR - The LUAU DUMPER OF DOOM",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/unveilr/bot"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "luau",
+    "roblox",
+    "unveilr",
+    "deobfuscation"
+  ],
+  "author": "UnveilR Team",
+  "license": "ISC",
+  "dependencies": {
+    "archiver": "^5.3.0",
+    "better-sqlite3": "^8.3.0",
+    "discord.js": "^14.13.0",
+    "dotenv": "^16.3.1",
+    "luau-web": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}
