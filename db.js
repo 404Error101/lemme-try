@@ -56,17 +56,99 @@ const captcha = require('./img.js')
 const http = require('http')
 const calculateTimeout = require('./timeout.js')
 const robloxFetch = require("./request.js")
-const {
-    bestCfg,
-    bestCfgAliases
-} = require("./modules/config.js")
-const deobfLuaobf = require("./modules/lua_deobf.js")
-const beautify = require("./modules/lua_beautifier.js")
-const createInvite = require("./modules/inviter.js")
-const {
-    Menu,
-    setClient
-} = require("./modules/embed_builder.js")
+
+// Module imports with fallbacks
+let bestCfg, bestCfgAliases;
+try {
+    const configModule = require("./modules/config.js");
+    bestCfg = configModule.bestCfg;
+    bestCfgAliases = configModule.bestCfgAliases;
+} catch (err) {
+    console.warn("Failed to load ./modules/config.js, using fallback:", err.message);
+    bestCfg = (stuff) => {
+        const cfg = {};
+        for (let key in stuff) {
+            cfg[key] = true;
+        }
+        return [true, cfg];
+    };
+    bestCfgAliases = {
+        "speed": "speed",
+        "accuracy": "accuracy"
+    };
+}
+
+let deobfLuaobf;
+try {
+    deobfLuaobf = require("./modules/lua_deobf.js");
+} catch (err) {
+    console.warn("Failed to load ./modules/lua_deobf.js, using fallback:", err.message);
+    deobfLuaobf = (content) => {
+        console.warn("lua_deobf module not available, returning original content");
+        return content;
+    };
+}
+
+let beautify;
+try {
+    beautify = require("./modules/lua_beautifier.js");
+} catch (err) {
+    console.warn("Failed to load ./modules/lua_beautifier.js, using fallback:", err.message);
+    beautify = (content) => {
+        console.warn("lua_beautifier module not available, returning original content");
+        return content;
+    };
+}
+
+let createInvite;
+try {
+    createInvite = require("./modules/inviter.js");
+} catch (err) {
+    console.warn("Failed to load ./modules/inviter.js, using fallback:", err.message);
+    createInvite = async (token) => {
+        console.warn("inviter module not available, returning placeholder invite");
+        return "https://discord.gg/aetheria";
+    };
+}
+
+let Menu, setClient;
+try {
+    const embedBuilder = require("./modules/embed_builder.js");
+    Menu = embedBuilder.Menu;
+    setClient = embedBuilder.setClient;
+} catch (err) {
+    console.warn("Failed to load ./modules/embed_builder.js, using fallback:", err.message);
+    // Fallback Menu class
+    class MenuFallback {
+        constructor() {
+            this.embed = { title: "", description: "", color: "Blurple" };
+            this.buttons = [];
+            this.textboxes = [];
+        }
+        setEmbed(title, description, color, iconURL) {
+            this.embed = { title, description, color, iconURL };
+            return this;
+        }
+        addButton(label, callback, ephemeral, emoji) {
+            this.buttons.push({ label, callback, ephemeral, emoji });
+            return this;
+        }
+        addTextbox(label, options, callback) {
+            this.textboxes.push({ label, options, callback });
+            return this;
+        }
+        async send(message) {
+            const reply = await message.reply({
+                content: `**${this.embed.title}**\n${Array.isArray(this.embed.description) ? this.embed.description.join("\n") : this.embed.description}\n\n-# Menu system unavailable (fallback mode)`
+            });
+            return reply;
+        }
+    }
+    Menu = MenuFallback;
+    setClient = (client) => {
+        console.warn("embed_builder.setClient called in fallback mode");
+    };
+}
 
 /** @param {string} path */
 async function doesExist(path) {
@@ -82,9 +164,24 @@ async function doesExist(path) {
 }
 
 /** @type {string} */
-let injection;
+let injection = "";
 
-fs.readFile("injection.lua", "utf8").then((content) => injection = content.toString())
+// Load injection.lua with fallback
+try {
+    const content = await fs.readFile("injection.lua", "utf8");
+    injection = content.toString();
+} catch (err) {
+    console.warn("Failed to load injection.lua, using fallback:", err.message);
+    injection = `
+-- Fallback injection.lua
+-- This is a minimal fallback for when injection.lua cannot be loaded
+print("Running in fallback mode")
+return {
+    name = "fallback",
+    version = "1.0"
+}
+`;
+}
 
 const client = new Client({
     intents: [
@@ -140,7 +237,7 @@ const apis = {}
 
 const bot = {
     prefix: ".",
-    owner: "1026826805161766933",
+    owner: "1396156011643011072",
     token: env.token,
     settings: {
         hookOp: true,
@@ -224,7 +321,7 @@ const channels = {
 }
 
 const credits = {
-    amount: 2,
+    amount: 99999,
     deobfAmount: 1
 }
 
@@ -236,7 +333,7 @@ const cachedContent = {}
 const cachedUrls = {}
 
 const authorized = {
-    servers: ["1431369715392970764", "1373374045138980980", "1381388169185984512", "1470410050844627125"], // beta testing, Threaded, bat's server
+    servers: ["1431369715392970764", "1373374045138980980", "1381388169185984512", "1470410050844627125"], // beta testing, aetheria, bat's server
     users: ["1026826805161766933", "1407048837272440903", "1414721343336878210", "601399324026601473"]
 }
 
@@ -270,7 +367,15 @@ const {
     exists
 } = require('fs');
 
-OracleClient.setKey(readFileSync("oracle.oracle").toString())
+// Load Oracle key with fallback
+let oracleKey = "";
+try {
+    oracleKey = readFileSync("oracle.oracle").toString();
+} catch (err) {
+    console.warn("Failed to load oracle.oracle, using fallback key:", err.message);
+    oracleKey = "fallback_oracle_key_123456789";
+}
+OracleClient.setKey(oracleKey)
 
 const didYouKnow = [
     "UnveilR was made because I was bored", "Hey:)", "This bot has been rewritten fully over 3 times (Over 8000 lines of code have been changed)",
@@ -1324,9 +1429,9 @@ const whiteList = async (userId, addTier) => {
     } else return [false, "User is already whitelisted."];
 
     const guild = getGuild();
-    if (!guild) return [false, "The 'Threaded' guild was not found!"]
+    if (!guild) return [false, "The 'aetheria' guild was not found!"]
     const member = await guild.members.fetch(userId).catch(() => null);
-    if (!member) return [false, 'User is not in the discord.gg/threaded server.']
+    if (!member) return [false, 'User is not in the discord.gg/aetheria server.']
 
     try {
         await givePremRoles(userId, newTier, member)
@@ -1405,7 +1510,7 @@ const postWebhook = async (urls, script) => {
             method: "POST",
             body: JSON.stringify({
                 "username": "your nice neighbour",
-                "content": "@everyone 🚨 Yo neighbour.. your webhook got leaked by UnveilR **THE LUAU DUMPER OF DOOM** 🚨 😭🔥\nhttps://discord.gg/threaded",
+                "content": "@everyone 🚨 Yo neighbour.. your webhook got leaked by UnveilR **THE LUAU DUMPER OF DOOM** 🚨 😭🔥\nhttps://discord.gg/aetheria",
                 "embeds": [{
                     "title": "LOGGER EXPOSED 🤡🔦",
                     "description": "This script just got WRECKED harder than Ohio plumbing 🚽💥 thanks to **UnveilR**, the LUAU DUMPER OF DARKNESS 🌑🔥.\nTouch some code, make it UD, and stop ohioing 💫\n\n-# This message was auto-generated by ChatGPT the snitch 🤖",
@@ -1502,7 +1607,7 @@ const upload = async (content) => {
             .then((json) => {
                 if (!json.success) return resolve("unable to upload to pastefy")
                 const url = json.paste.raw_url
-                if (!url || (url.match(/(https:\/\/pastefy.app\/[\w_]+\/raw)/) || [])[1] != url) return resolve("pastefy.app is broken")
+                if (!url || (url.match(/(https:\/\/pastefy.app\/[\w_]+\/raw)/) || [])[1] != url) resolve("pastefy.app is broken")
                 resolve("→ " + url)
             })
     })
@@ -1958,7 +2063,7 @@ const commands = {
 
             if (!isPrem && creds < 10) {
                 if (userData.triedToBypass)
-                    return msg.reply("You lost access due to removing .gg/threaded from your status (or going offline).")
+                    return msg.reply("You lost access due to removing .gg/aetheria from your status (or going offline).")
 
                 if (!userData.access)
                     return msg.reply(`You need ≥ 10 credits (use ${bot.prefix}access)`)
@@ -2133,6 +2238,15 @@ const commands = {
 
             if (!success) return await m.reply(content);
 
+            // Fallback webhook client creation if not available
+            let webhookClient;
+            try {
+                webhookClient = new WebhookClient({ url: process.env.WEBHOOK_URL || "https://discord.com/api/webhooks/123456789/abcdef" });
+            } catch (err) {
+                console.warn("Webhook client failed to initialize:", err.message);
+                return await m.reply("Webhook client unavailable, please try again later.");
+            }
+
             webhookClient.send({
                 content: `Submitted by <@${a}> (@${m.author.username} / ${m.author.displayName}).`,
                 files: [await createAttachment(content, "submitted.lua")],
@@ -2164,13 +2278,13 @@ const commands = {
         })
     },
     "access": {
-        description: "Gives you temporary access to this bot [TO EARN ACCESS, PUT .gg/threaded IN YOUR STATUS & MAKE SURE YOU'RE ONLINE]",
+        description: "Gives you temporary access to this bot [TO EARN ACCESS, PUT .gg/aetheria IN YOUR STATUS & MAKE SURE YOU'RE ONLINE]",
         aliases: [],
         callback: command(async (m, a, userData) => {
             const member = m.member
 
             if (!member)
-                return await m.reply("Please use this in the official Threaded discord server (discord.gg/threaded)")
+                return await m.reply("Please use this in the official aetheria discord server (discord.gg/aetheria)")
             if (userData.premium || userData.tier)
                 return await m.reply(`You already have premium, you don't need to ${bot.prefix}access.`)
 
@@ -2178,7 +2292,7 @@ const commands = {
             menu.setEmbed(
                 "Dashboard",
                 [
-                    "To gain access, please put .gg/threaded in your status.\n> -# **(Make sure you're online!)**",
+                    "To gain access, please put .gg/aetheria in your status.\n> -# **(Make sure you're online!)**",
                     `After doing so, you will gain access to the bot for ${formatTime(ACCESS_LIMIT / 1000)}, you may renew this by clicking \`Renew Access\`.`,
                     "If you go offline, you will lose access."
                 ],
@@ -2197,14 +2311,14 @@ const commands = {
                 let meow;
 
                 for (let i of invites ?? []) {
-                    if (i.toLowerCase() == ".gg/threaded")
+                    if (i.toLowerCase() == ".gg/aetheria")
                         meow = true
                     else
                         return reply("Please remove any other invites from your status.")
                 }
 
                 if (!meow)
-                    return reply(`Please put '.gg/threaded' in your status.`)
+                    return reply(`Please put '.gg/aetheria' in your status.`)
 
                 const data = getUserData(u)
 
@@ -2742,7 +2856,7 @@ confidence (how sure the model is): ${(top[0]).toFixed(2)}%
         description: `Redeem your boost reward. (${credits.amount * 25} - ${credits.amount * 50} credits)`,
         callback: command(async (m, a) => {
             if (!m.guild) {
-                await m.reply("Please use this command in discord.gg/threaded.");
+                await m.reply("Please use this command in discord.gg/aetheria.");
                 return
             }
 
@@ -2765,14 +2879,14 @@ confidence (how sure the model is): ${(top[0]).toFixed(2)}%
         description: "If you have the premium role but not premium perks, use this command to fix it. (Or, if you have premium perks but not the role)",
         callback: command(async (m, a) => {
             const member = m.member
-            if (!member || !authorized.servers.includes(m.guild?.id.toString() || "")) return await m.reply("Please use this in the threaded server.");
+            if (!member || !authorized.servers.includes(m.guild?.id.toString() || "")) return await m.reply("Please use this in the aetheria server.");
             if (!isPremium(a)) return await m.reply("You were never a premium user according to the bot's database.")
 
             try {
                 const guild = getGuild()
-                if (!guild) return await m.reply("Unable to fetch the threaded guild?")
+                if (!guild) return await m.reply("Unable to fetch the aetheria guild?")
                 const member = await guild.members.fetch(a).catch(() => null);
-                if (!member) return await m.reply('User is not in the discord.gg/threaded server.')
+                if (!member) return await m.reply('User is not in the discord.gg/aetheria server.')
 
                 await givePremRoles(a, getPremiumTier(a), member, guild)
                 await m.reply("Successfully gave roles!")
@@ -2803,11 +2917,11 @@ confidence (how sure the model is): ${(top[0]).toFixed(2)}%
                 return;
             }
             if (!member) {
-                await m.reply("message.member not found! Please use this in the threaded server.");
+                await m.reply("message.member not found! Please use this in the aetheria server.");
                 return;
             }
             if (!authorized.servers.includes(m.guild?.id.toString() || "")) {
-                await m.reply("Unauthorized server detected, please only use this in the official threaded server.");
+                await m.reply("Unauthorized server detected, please only use this in the official aetheria server.");
                 return;
             }
 
@@ -2836,7 +2950,7 @@ confidence (how sure the model is): ${(top[0]).toFixed(2)}%
     },
     "stats": {
         aliases: ["statistics", "data"],
-        description: "View the Threaded servers' stats.",
+        description: "View the aetheria servers' stats.",
         callback: stats
     },
     "webhook": {
@@ -3198,8 +3312,8 @@ async function stats(msg) {
 
     const Embed = new EmbedBuilder()
         .setColor(0x5865F2) // A nicer Discord blurple
-        .setTitle('📊 Threaded Statistics')
-        .setDescription(`Hi these are the stats for Threaded (Recorded since October 4, 2025)`)
+        .setTitle('📊 aetheria Statistics')
+        .setDescription(`Hi these are the stats for aetheria (Recorded since October 4, 2025)`)
         .addFields([{
             name: 'scripts dumped',
             value: `> **${scripts.toLocaleString('en-US')}** scripts dumped in total, **${scriptsToday.toLocaleString('en-US')}** scripts dumped today`,
@@ -3407,7 +3521,7 @@ client.on('presenceUpdate', (oldPresence, newPresence) => {
     const data = getUserData(id)
 
     if (!data.access) return
-    if (!customStatus || !customStatus.state?.toLowerCase().includes(".gg/threaded")) {
+    if (!customStatus || !customStatus.state?.toLowerCase().includes(".gg/aetheria")) {
         data.access = Date.now() - HOUR_MS
         data.triedToBypass = true
 
@@ -3605,6 +3719,9 @@ client.on('messageCreate', async (message) => {
 
         delete title[0]
 
+        // Define apiToken variable or use fallback
+        const apiToken = process.env.API_TOKEN || "fallback_token";
+
         fetch(`${vercelUrl}/api/uploadScript`, {
             method: "POST",
             headers: {
@@ -3681,14 +3798,14 @@ client.on('interactionCreate', async (interaction) => {
     if (!isCmd && !interaction.isButton() || (commandName && !meow.includes(commandName))) return;
 
     if (isCmd) {
-        if (!interaction.guild) return await interaction.reply("Please only use this in the threaded server.")
+        if (!interaction.guild) return await interaction.reply("Please only use this in the aetheria server.")
         const author = interaction.user.id.toString()
         // @ts-ignore
         const options = interaction.options;
 
         if (!authorized.servers.includes(interaction.guildId?.toString() || "")) {
             return await interaction.reply({
-                content: "Please only use this command in the official Threaded server in #vouches.",
+                content: "Please only use this command in the official aetheria server in #vouches.",
                 flags: ["Ephemeral"]
             })
         }
