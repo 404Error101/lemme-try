@@ -3,9 +3,9 @@
   "version": "2.11.0",
   "private": true,
   "description": "UnveilR - The LUAU DUMPER OF DOOM",
-  "main": "db.js",
+  "main": "db.cjs",
   "scripts": {
-    "start": "node db.js"
+    "start": "node db.cjs"
   },
   "engines": {
     "node": "20.x"
