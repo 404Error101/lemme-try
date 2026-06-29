@@ -1,20 +1,19 @@
 {
   "name": "unveilr-bot",
   "version": "2.11.0",
+  "private": true,
   "description": "UnveilR - The LUAU DUMPER OF DOOM",
   "main": "db.js",
-  "private": true,
   "scripts": {
-    "start": "node db.js",
-    "dev": "node db.js"
+    "start": "node db.js"
   },
   "engines": {
-    "node": ">=22"
+    "node": "20.x"
   },
   "dependencies": {
     "archiver": "^7.0.1",
     "axios": "^1.11.0",
-    "better-sqlite3": "^12.2.0",
+    "better-sqlite3": "^12.4.1",
     "canvas": "^3.2.0",
     "chalk": "^5.6.2",
     "discord.js": "^14.22.1",
