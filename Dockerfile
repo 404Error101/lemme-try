@@ -30,7 +30,7 @@ COPY . .
 RUN mkdir -p ./unveilr/inputs ./unveilr/cache ./unveilr/temp ./unveilr/dumps ./cache ./storage
 
 # Download and setup Lune (Luau runtime)
-RUN wget https://github.com/lune-org/lune/releases/download/v0.8.3/lune-linux-x86_64.zip \
+RUN wget https://github.com/lune-org/lune/releases/download/v0.10.4/lune-0.10.4-linux-x86_64.zip \
     && unzip lune-linux-x86_64.zip \
     && chmod +x lune \
     && mv lune /usr/local/bin/ \
