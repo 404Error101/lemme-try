@@ -2,10 +2,10 @@
   "name": "unveilr-bot",
   "version": "2.11.0",
   "description": "UnveilR - The LUAU DUMPER OF DOOM",
-  "main": "index.js",
+  "main": "db.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js",
+    "start": "node db.js",
+    "dev": "node db.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
